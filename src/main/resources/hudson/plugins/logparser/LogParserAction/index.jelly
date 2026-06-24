@@ -18,10 +18,10 @@
           </tr>
         </table>
       </j:if>
-      <j:if test="${badParseRules}"><font color="red">NOTE:</font> Some bad parsing rules have been found:<br/>
+      <j:if test="${badParseRules}"><span style="color: var(--error-color)">NOTE:</span> Some bad parsing rules have been found:<br/>
         ${it.result.badParsingRulesErrorDisplay}<br/>
       </j:if>
-      <j:if test="${parseFailed}"><font color="red">ERROR:</font> Failed to parse console log
+      <j:if test="${parseFailed}"><span style="color: var(--error-color)">ERROR:</span> Failed to parse console log
         <p>${it.result.failedToParseError}</p>
       </j:if>
     </l:main-panel>

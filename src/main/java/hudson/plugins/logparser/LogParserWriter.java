@@ -1,7 +1,5 @@
 package hudson.plugins.logparser;
 
-import jenkins.model.Jenkins;
-
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.FileReader;
@@ -43,6 +41,7 @@ public final class LogParserWriter {
     public static void writeReferenceHtml(final String buildRefPath,
             final ArrayList<String> headerForSection,
             final HashMap<String, Integer> statusCountPerSection,
+            // Retained for backwards compatibility; status markers are now themed inline SVGs.
             final HashMap<String, String> iconTable,
             final HashMap<String, String> linkListDisplay,
             final HashMap<String, String> linkListDisplayPlural,
@@ -55,24 +54,24 @@ public final class LogParserWriter {
             writer.write(LogParserConsts.getHtmlOpeningTags());
             // Write Errors
             writeLinks(writer, LogParserConsts.ERROR, headerForSection,
-                    statusCountPerSection, iconTable, linkListDisplay,
+                    statusCountPerSection, linkListDisplay,
                     linkListDisplayPlural, statusCount, linkFiles);
             // Write Warnings
             writeLinks(writer, LogParserConsts.WARNING, headerForSection,
-                    statusCountPerSection, iconTable, linkListDisplay,
+                    statusCountPerSection, linkListDisplay,
                     linkListDisplayPlural, statusCount, linkFiles);
             // Write Infos
             writeLinks(writer, LogParserConsts.INFO, headerForSection,
-                    statusCountPerSection, iconTable, linkListDisplay,
+                    statusCountPerSection, linkListDisplay,
                     linkListDisplayPlural, statusCount, linkFiles);
             // Write Debugs
             writeLinks(writer, LogParserConsts.DEBUG, headerForSection,
-                    statusCountPerSection, iconTable, linkListDisplay,
+                    statusCountPerSection, linkListDisplay,
                     linkListDisplayPlural, statusCount, linkFiles);
             // Write extra tags
             for (String extraTag : extraTags) {
                 writeLinks(writer, extraTag, headerForSection,
-                        statusCountPerSection, iconTable, linkListDisplay,
+                        statusCountPerSection, linkListDisplay,
                         linkListDisplayPlural, statusCount, linkFiles);
             }
             writer.write(LogParserConsts.getHtmlClosingTags());
@@ -82,15 +81,10 @@ public final class LogParserWriter {
     private static void writeLinks(final BufferedWriter writer,
             final String status, final ArrayList<String> headerForSection,
             final HashMap<String, Integer> statusCountPerSection,
-            final HashMap<String, String> iconTable,
             final HashMap<String, String> linkListDisplay,
             final HashMap<String, String> linkListDisplayPlural,
             final HashMap<String, Integer> statusCount,
             final HashMap<String, String> linkFiles) throws IOException {
-        String statusIcon = iconTable.get(status);
-        if (statusIcon == null) {
-            statusIcon = LogParserDisplayConsts.DEFAULT_ICON;
-        }
         String linkListDisplayStr = linkListDisplay.get(status);
         if (linkListDisplayStr == null) {
             linkListDisplayStr = LogParserDisplayConsts.getDefaultLinkListDisplay(status);
@@ -101,10 +95,7 @@ public final class LogParserWriter {
         }
         final String linkListCount = statusCount.get(status).toString();
 
-        final String hudsonRoot = Jenkins.get().getRootUrl();
-        final String iconLocation = String.format("%s/plugin/log-parser/images/", Jenkins.RESOURCE_PATH).substring(1);
-		
-        final String styles = 
+        final String styles =
             "<style>\n" 
             + "    ul {margin-left: 0; padding-left: 1em;}\n"
             + "    ul li {font-size: small; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; margin-top: .5em; }\n"
@@ -114,10 +105,16 @@ public final class LogParserWriter {
             + "</style>\n";
         writer.write(styles);
 		
-        final String linksStart = "<img src=\"" + hudsonRoot + iconLocation + statusIcon
-                + "\" style=\"margin: 2px;\" width=\"24\" alt=\"" + linkListDisplayStr + " Icon\" height=\"24\" />\n"
-                + "<a class=\"lpp-toggle-list\" href=\"#\" data-display-category=\"" + linkListDisplayStr + "\"><STRONG>"
-                + linkListDisplayStr + " (" + linkListCount + ")</STRONG></a><br />\n"
+        // Render the status marker as an inline, theme-aware SVG dot. It inherits its colour from the
+        // matching status class (see LogParserConsts.getThemeStyles()) via currentColor, so it follows
+        // the light / dark colour scheme instead of relying on a fixed-background GIF.
+        final String icon = "<svg class=\"" + status.toLowerCase() + "\" width=\"16\" height=\"16\""
+                + " viewBox=\"0 0 16 16\" role=\"img\" aria-label=\"" + linkListDisplayStr + " Icon\""
+                + " style=\"vertical-align: middle; margin: 2px;\"><circle cx=\"8\" cy=\"8\" r=\"6\" fill=\"currentColor\" /></svg>\n";
+        // Weight comes from the .lpp-toggle-list rule (Jenkins link weight) rather than <strong>.
+        final String linksStart = icon
+                + "<a class=\"lpp-toggle-list\" href=\"#\" data-display-category=\"" + linkListDisplayStr + "\">"
+                + linkListDisplayStr + " (" + linkListCount + ")</a><br />\n"
                 + "<ul style=\"display: none;\" id=\""
                 + linkListDisplayStr + "\" >\n";
         writer.write(linksStart);

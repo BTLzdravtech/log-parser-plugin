@@ -16,12 +16,15 @@ import hudson.util.StackedAreaRenderer2;
 import jenkins.tasks.SimpleBuildStep;
 
 import java.awt.Color;
+import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
+import java.io.OutputStream;
 
 import java.util.Collection;
 import java.util.Collections;
 
+import javax.imageio.ImageIO;
 import javax.servlet.ServletException;
 
 import org.jfree.chart.ChartFactory;
@@ -44,6 +47,13 @@ public class LogParserAction implements Action, SimpleBuildStep.LastBuildAction 
     final private boolean showGraphs;
 
     private static String urlName = "parsed_console";
+
+    // Fully transparent fill so the page background (light or dark theme) shows through the chart.
+    private static final Color TRANSPARENT = new Color(0, 0, 0, 0);
+    // Mid-grey with alpha for gridlines, readable on both light and dark backgrounds.
+    private static final Color GRIDLINE_COLOR = new Color(128, 128, 128, 128);
+    // Opaque mid-grey for axis lines, ticks and labels, readable on both themes.
+    private static final Color AXIS_COLOR = new Color(128, 128, 128);
 
     @Deprecated
     public LogParserAction(final AbstractBuild<?, ?> build, final LogParserResult result, final boolean showGraphs) {
@@ -131,8 +141,16 @@ public class LogParserAction implements Action, SimpleBuildStep.LastBuildAction 
         if (req.checkIfModified(getOwner().getTimestamp(), rsp))
             return;
 
-        ChartUtil.generateGraph(req, rsp, createChart(req, buildDataSet()),
-                calcDefaultSize());
+        // Render the PNG ourselves with an alpha channel so the chart's transparent background is
+        // preserved (ChartUtil.generateGraph would flatten it onto an opaque background). This lets the
+        // graph blend into whichever Jenkins theme (light or dark) is active.
+        final Area size = calcDefaultSize();
+        final JFreeChart chart = createChart(req, buildDataSet());
+        final BufferedImage image = chart.createBufferedImage(size.width, size.height, BufferedImage.TYPE_INT_ARGB, null);
+        rsp.setContentType("image/png");
+        try (OutputStream out = rsp.getOutputStream()) {
+            ImageIO.write(image, "png", out);
+        }
     }
 
     public void doGraphMap(StaplerRequest req, StaplerResponse rsp)
@@ -194,18 +212,21 @@ public class LogParserAction implements Action, SimpleBuildStep.LastBuildAction 
         //final StandardLegend legend = (StandardLegend) chart.getLegend();
         //legend.setAnchor(StandardLegend.SOUTH);
 
-        chart.setBackgroundPaint(Color.white);
+        // Transparent backgrounds and theme-neutral (mid-grey) gridlines and axis text so the graph
+        // reads correctly against either a light or a dark Jenkins theme. The transparent areas are
+        // preserved because doGraph() encodes the PNG with an alpha channel.
+        chart.setBackgroundPaint(TRANSPARENT);
 
         final CategoryPlot plot = chart.getCategoryPlot();
 
         //plot.setAxisOffset(new Spacer(Spacer.ABSOLUTE, 5.0, 5.0, 5.0, 5.0));
-        plot.setBackgroundPaint(Color.WHITE);
+        plot.setBackgroundPaint(TRANSPARENT);
         plot.setOutlinePaint(null);
         plot.setForegroundAlpha(0.8f);
         //plot.setDomainGridlinesVisible(true);
         //plot.setDomainGridlinePaint(Color.white);
         plot.setRangeGridlinesVisible(true);
-        plot.setRangeGridlinePaint(Color.black);
+        plot.setRangeGridlinePaint(GRIDLINE_COLOR);
 
         CategoryAxis domainAxis = new ShiftedCategoryAxis(null);
         plot.setDomainAxis(domainAxis);
@@ -213,9 +234,15 @@ public class LogParserAction implements Action, SimpleBuildStep.LastBuildAction 
         domainAxis.setLowerMargin(0.0);
         domainAxis.setUpperMargin(0.0);
         domainAxis.setCategoryMargin(0.0);
+        domainAxis.setTickLabelPaint(AXIS_COLOR);
+        domainAxis.setLabelPaint(AXIS_COLOR);
+        domainAxis.setAxisLinePaint(AXIS_COLOR);
 
         final NumberAxis rangeAxis = (NumberAxis) plot.getRangeAxis();
         rangeAxis.setStandardTickUnits(NumberAxis.createIntegerTickUnits());
+        rangeAxis.setTickLabelPaint(AXIS_COLOR);
+        rangeAxis.setLabelPaint(AXIS_COLOR);
+        rangeAxis.setAxisLinePaint(AXIS_COLOR);
 
         StackedAreaRenderer ar = new StackedAreaRenderer2() {
 

@@ -145,15 +145,9 @@ public class LogParserParser {
             // replaced by the actual header and count for
             // this header
             headerForSection.add(shortLink);
+            // The body and pre styles are emitted as part of the themed stylesheet
+            // in LogParserConsts.getHtmlOpeningTags().
             writer.write(LogParserConsts.getHtmlOpeningTags());
-
-            // write styles for log body
-            final String styles = "<style>\n"
-                    + "  body {margin-left:.5em; }\n"
-                    + "  pre {font-family: Consolas, \"Courier New\"; word-wrap: break-word; }\n"
-                    + "  pre span {word-wrap: break-word; } \n"
-                    + "</style>\n";
-            writer.write(styles);
 
             if (this.preformattedHtml)
                 writer.write("<pre>");
@@ -282,14 +276,11 @@ public class LogParserParser {
     }
 
     private String colorLine(final String line, final String status) {
-        String color = displayConstants.getColorTable().get(status);
-        if (color == null) {
-            color = LogParserDisplayConsts.DEFAULT_COLOR;
-        }
+        // The colour for each status comes from the themed stylesheet (see
+        // LogParserConsts.getThemeStyles()), keyed off the status class below. This keeps the
+        // generated markup theme-aware (light / dark) instead of baking in a fixed colour.
         final StringBuffer result = new StringBuffer("<span class=\"");
         result.append(status.toLowerCase());
-        result.append("\" style=\"color: ");
-        result.append(color);
         result.append("\">");
         result.append(line);
         result.append("</span>");

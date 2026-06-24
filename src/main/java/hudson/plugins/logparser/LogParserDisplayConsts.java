@@ -10,7 +10,18 @@ public class LogParserDisplayConsts {
     final private HashMap<String, String> linkListDisplay = new HashMap<>();
     final private HashMap<String, String> linkListDisplayPlural = new HashMap<>();
 
+    /**
+     * @deprecated Status colours are now supplied by the themed stylesheet (see
+     * {@link LogParserConsts#getThemeStyles()}) so that the generated log follows the light / dark
+     * colour scheme. This fixed colour is no longer applied to the generated HTML.
+     */
+    @Deprecated
     public static final String DEFAULT_COLOR = "blue";
+    /**
+     * @deprecated Status markers are now rendered as themed inline SVGs (see
+     * {@link LogParserWriter}) rather than the bundled GIF icons, so this fallback is no longer used.
+     */
+    @Deprecated
     public static final String DEFAULT_ICON = "blue.gif";
 
     public static String getDefaultLinkListDisplay(String status) {
@@ -47,6 +58,13 @@ public class LogParserDisplayConsts {
         linkListDisplayPlural.put(LogParserConsts.DEBUG, "Debugs");
     }
 
+    /**
+     * @return the legacy status-to-colour mapping.
+     * @deprecated Status colours are now supplied by the themed stylesheet (see
+     * {@link LogParserConsts#getThemeStyles()}) so the generated log follows the light / dark colour
+     * scheme. This table is no longer consulted when rendering the log.
+     */
+    @Deprecated
     public HashMap<String, String> getColorTable() {
         return colorTable;
     }
